@@ -11,7 +11,7 @@ class SimpleSPSA ( object ):
     a = .0017
     
 
-    def __init__ ( self, loss_function, noise_var=0.01, args=(), min_vals=None, max_vals=None, param_tolerance=None, function_tolerance=None,  n_grads=10 ):
+    def __init__ ( self, loss_function, noise_var=0.01, args=(), min_vals=None, max_vals=None, param_tolerance=None, function_tolerance=None ):
         """The constructor requires a loss function and any required extra 
         arguments. Optionally, boundaries as well as tolerance thresholds can
         be specified"""
@@ -22,7 +22,7 @@ class SimpleSPSA ( object ):
         self.param_tolerance = param_tolerance
         self.function_tolerance = function_tolerance
         self.c = noise_var
-        self.max_iter = 500
+        self.max_iter = 5000000
         self.A = self.max_iter*0.1
         
     def calc_loss ( self, theta ):
@@ -50,28 +50,31 @@ class SimpleSPSA ( object ):
                 j_plus = self.calc_loss ( theta_plus )
                 j_minus = self.calc_loss ( theta_minus )
                 ghat = ghat + ( j_plus - j_minus)/(2.*ck*delta)
+            fprime = optimize.approx_fprime ( theta, self.calc_loss, 1e-15)
+            ghat = ghat/float(ens_size)
+            #theta = theta - ak*ghat
+            theta = theta - ak*fprime
             
-            theta = theta - ak*(ghat/float(ens_size))
             j_new = self.calc_loss ( theta )
-            print "\tIter %05d"%n_iter, j_new, theta,(ghat/float(ens_size))
+            print "\tIter %05d"%n_iter, j_new, theta
             if self.function_tolerance is not None:    
                 if np.abs ( j_new - j_old ) > self.function_tolerance:
                     print "\t No function tolerance!", np.abs ( j_new - j_old )
                     theta = theta_saved
-                    
+                    continue
                 else:
                     j_old = j_new
             if self.param_tolerance is not None:
                 theta_dif = np.abs ( theta - theta_saved ) 
-                if np.all ( theta_dif < self.param_tolerance ):
-                    print "\t No param tolerance!"
+                if not np.all ( theta_dif < self.param_tolerance ):
+                    print "\t No param tolerance!",theta_dif < self.param_tolerance
                     theta = theta_saved
-                    
+                    continue
                     
             if (self.min_vals is not None) and (self.max_vals is not None):
                 theta = np.minimum ( theta, self.min_vals )
                 theta = np.maximum ( theta, self.max_vals ) 
-            
+                continue
             
             n_iter += 1
         return ( theta, j_new, n_iter)
@@ -89,10 +92,10 @@ if __name__ == "__main__":
     fitfunc = lambda p, x: p[0]*np.cos(2*np.pi/p[1]*x+p[2]) + p[3]*x # Target function
     errfunc = lambda p, x, y: np.sum((fitfunc(p, x) - y)**2) # Distance to the target function
     errfunc2 = lambda p, x, y: fitfunc(p, x) - y # Distance to the target function
-    opti = SimpleSPSA ( errfunc, args=(Tx, tX), noise_var=0.1, function_tolerance=25000, n_grads=50 )
+    opti = SimpleSPSA ( errfunc, args=(Tx, tX), noise_var=0.01, param_tolerance=1 )
     p_0 = [-12.35128092,   0.80940765,   1.82567199,   0.63476032]
     
     p1, success = optimize.leastsq(errfunc2, p_0, args=(Tx, tX))
     
     theta_0 = np.array([-15., 0.8, 0., -1.])
-    opti.minimise (p1, ens_size = 20)
+    opti.minimise (theta_0, ens_size = 2)
