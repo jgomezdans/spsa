@@ -8,7 +8,7 @@ class SimpleSPSA ( object ):
     # These constants are used throughout
     alpha = 0.602
     gamma = 0.101
-    a = .0017
+    a = 1e-6
     
 
     def __init__ ( self, loss_function, noise_var=0.01, args=(), min_vals=None, max_vals=None, param_tolerance=None, function_tolerance=None ):
@@ -23,22 +23,23 @@ class SimpleSPSA ( object ):
         self.function_tolerance = function_tolerance
         self.c = noise_var
         self.max_iter = 5000000
-        self.A = self.max_iter*0.1
+        self.A = self.max_iter/10.
         
     def calc_loss ( self, theta ):
         """Evalute the cost/loss function with a value of theta"""
         retval = self.loss ( theta, *(self.args ) )
         return retval
 
-    def minimise ( self, theta_0, ens_size=10 ):
+    def minimise ( self, theta_0, ens_size=3 ):
         """The main minimisation looop"""
         n_iter = 0
         p = theta_0.shape[0]
         print "Starting theta=", theta_0
         theta = theta_0
         j_old = self.calc_loss ( theta )
-        ghat = 10000.
-        while (n_iter < self.max_iter):
+        theta_saved = theta_0*100
+        while  (np.linalg.norm(theta_saved-theta)/np.linalg.norm(theta_saved) > \
+                1e-8) and (n_iter < self.max_iter):
             theta_saved = theta
             ak = self.a/( n_iter + 1 + self.A)**self.alpha
             ck = self.c/( n_iter + 1 )**self.gamma  
@@ -50,13 +51,17 @@ class SimpleSPSA ( object ):
                 j_plus = self.calc_loss ( theta_plus )
                 j_minus = self.calc_loss ( theta_minus )
                 ghat = ghat + ( j_plus - j_minus)/(2.*ck*delta)
-            fprime = optimize.approx_fprime ( theta, self.calc_loss, 1e-15)
+            ###fprime = optimize.approx_fprime ( theta, self.calc_loss, 1e-15)
+            ###fprime[0] = np.sum ( 2*self.args[0]**2*(self.args[1]-theta[0]*self.args[0]**2 - theta[1]*self.args[0] - theta[2]))/self.args[2]**2
+            ###fprime[1] = np.sum ( 2*self.args[0]*(self.args[1]-theta[0]*self.args[0]**2 - theta[1]*self.args[0] - theta[2]))/self.args[2]**2
+            ###fprime[2] = np.sum ( 2*(self.args[1]-theta[0]*self.args[0]**2 - theta[1]*self.args[0] - theta[2]))/self.args[2]**2
             ghat = ghat/float(ens_size)
-            #theta = theta - ak*ghat
-            theta = theta - ak*fprime
+            theta = theta - ak*ghat
+            #theta = theta - ak*fprime
             
             j_new = self.calc_loss ( theta )
-            print "\tIter %05d"%n_iter, j_new, theta
+            if n_iter % 500 == 0:
+                print "\tIter %05d"%n_iter, j_new, theta, ak, ck
             if self.function_tolerance is not None:    
                 if np.abs ( j_new - j_old ) > self.function_tolerance:
                     print "\t No function tolerance!", np.abs ( j_new - j_old )
@@ -72,30 +77,27 @@ class SimpleSPSA ( object ):
                     continue
                     
             if (self.min_vals is not None) and (self.max_vals is not None):
-                theta = np.minimum ( theta, self.min_vals )
-                theta = np.maximum ( theta, self.max_vals ) 
-                continue
+                theta = np.minimum ( theta, self.max_vals )
+                theta = np.maximum ( theta, self.min_vals ) 
+             
             
             n_iter += 1
         return ( theta, j_new, n_iter)
 
 if __name__ == "__main__":
     from scipy import optimize
-    num_points = 150
-    Tx = np.linspace(5., 8., num_points)
-    Ty = Tx
-    tX = 11.86*np.cos(2*np.pi/0.81*Tx-1.32) + \
-        0.64*Tx+4*((0.5-np.random.rand(num_points))*np.exp(2*np.random.rand(num_points)**2))
-    tY = -32.14*np.cos(2*np.pi/0.8*Ty-1.94) + \
-        0.15*Ty+7*((0.5-np.random.rand(num_points))*np.exp(2*np.random.rand(num_points)**2))
-    # Fit the first set
-    fitfunc = lambda p, x: p[0]*np.cos(2*np.pi/p[1]*x+p[2]) + p[3]*x # Target function
-    errfunc = lambda p, x, y: np.sum((fitfunc(p, x) - y)**2) # Distance to the target function
-    errfunc2 = lambda p, x, y: fitfunc(p, x) - y # Distance to the target function
-    opti = SimpleSPSA ( errfunc, args=(Tx, tX), noise_var=0.01, param_tolerance=1 )
-    p_0 = [-12.35128092,   0.80940765,   1.82567199,   0.63476032]
     
-    p1, success = optimize.leastsq(errfunc2, p_0, args=(Tx, tX))
+    fitfunc = lambda p, x: p[0]*x*x + p[1]*x + p[2]
+    errfunc = lambda p, x, y, noise_var: np.sum ( (fitfunc(p,x)-y)**2/noise_var**2 )
+    errfunc2 = lambda p, x, y: fitfunc(p,x)-y
+    # make some data
+    x = np.arange(100) * 0.3
+    obs = 0.1 * x**2 - 2.6 * x - 1.5
+    np.random.seed(76523654)
+    noise = np.random.normal(size=100) * 0.3     # add some noise to the obs
+    obs += noise
     
-    theta_0 = np.array([-15., 0.8, 0., -1.])
-    opti.minimise (theta_0, ens_size = 2)
+    opti = SimpleSPSA ( errfunc, args=( x, obs, 0.3), noise_var=0.3, \
+        min_vals=np.ones(3)*(-5), max_vals = np.ones(3)*5 )
+    theta_0 = np.random.rand(3)
+    opti.minimise (theta_0 )
