@@ -106,7 +106,7 @@ class SimpleSPSA ( object ):
             j_new = self.calc_loss ( theta )
             # Be chatty to the user, tell him/her how it's going...
             if n_iter % 500 == 0:
-                print "\tIter %05d" % n_iter, j_new, theta, ak, ck
+                print "\tIter %05d" % n_iter, j_new, ak, ck
             # Functional tolerance: you can specify to ignore new theta values
             # that result in large shifts in the function value. Not a great
             # way to keep the results sane, though, as ak and ck decrease
@@ -129,8 +129,12 @@ class SimpleSPSA ( object ):
                     continue
             # Ignore results that are outside the boundaries
             if (self.min_vals is not None) and (self.max_vals is not None):
-                theta = np.minimum ( theta, self.max_vals )
-                theta = np.maximum ( theta, self.min_vals ) 
+                i_max = np.where ( theta >= self.max_vals )
+                i_min = np.where ( theta <= self.min_vals )
+                theta[imax] = self.max_vals[imax]*0.9
+                theta[imin] = self.min_vals[imax]*1.1
+                #theta = np.minimum ( theta, self.max_vals )
+                #theta = np.maximum ( theta, self.min_vals ) 
             n_iter += 1
         return ( theta, j_new, n_iter)
 
