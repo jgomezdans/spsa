@@ -131,8 +131,8 @@ class SimpleSPSA ( object ):
             if (self.min_vals is not None) and (self.max_vals is not None):
                 i_max = np.where ( theta >= self.max_vals )
                 i_min = np.where ( theta <= self.min_vals )
-                theta[imax] = self.max_vals[imax]*0.9
-                theta[imin] = self.min_vals[imax]*1.1
+                theta[i_max] = self.max_vals[i_max]*0.9
+                theta[i_min] = self.min_vals[i_min]*1.1
                 #theta = np.minimum ( theta, self.max_vals )
                 #theta = np.maximum ( theta, self.min_vals ) 
             n_iter += 1
