@@ -82,7 +82,7 @@ class SimpleSPSA ( object ):
             # a degree of tweaking
             ak = self.a_par/( n_iter + 1 + self.big_a_par)**self.alpha
             ck = self.c_par/( n_iter + 1 )**self.gamma  
-            ghat = 0. # Initialise gradient estimate
+            ghat = 0.  # Initialise gradient estimate
             for j in np.arange ( ens_size ):
                 # This loop produces ``ens_size`` realisations of the gradient
                 # which will be averaged. Each has a cost of two function runs.
@@ -90,9 +90,9 @@ class SimpleSPSA ( object ):
                 delta = (np.random.randint(0, 2, num_p) * 2 - 1)
                 # Stochastic perturbation, innit
                 theta_plus = theta + ck*delta
-                theta_plus = np.maximum ( theta_plus, self.max_vals )
+                theta_plus = np.minimum ( theta_plus, self.max_vals )
                 theta_minus = theta - ck*delta
-                theta_minus = np.minimum ( theta_minus, self.min_vals )
+                theta_minus = np.maximum ( theta_minus, self.min_vals )
                 # Funcion values associated with ``theta_plus`` and 
                 #``theta_minus``
                 j_plus = self.calc_loss ( theta_plus )
@@ -103,8 +103,20 @@ class SimpleSPSA ( object ):
             ghat = ghat/float(ens_size)
             # The new parameter is the old parameter plus a scaled displacement
             # along the gradient.
-            theta = theta - ak*ghat
-
+            not_all_pass = True
+            this_ak = ( theta*0 + 1 )*ak
+            theta_new = theta
+            while not_all_pass:
+                out_of_bounds = np.where ( np.logical_or ( \
+                    theta_new - this_ak*ghat > self.max_vals, 
+                    theta_new - this_ak*ghat < self.min_vals ) )[0]
+                theta_new = theta - this_ak*ghat
+                if len ( out_of_bounds ) == 0:
+                    theta = theta - this_ak*ghat
+                    not_all_pass = False
+                else:
+                    this_ak[out_of_bounds] = this_ak[out_of_bounds]/2.
+            
             # The new value of the gradient.
             j_new = self.calc_loss ( theta )
             # Be chatty to the user, tell him/her how it's going...
