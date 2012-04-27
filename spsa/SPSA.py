@@ -154,7 +154,7 @@ class SimpleSPSA ( object ):
                 plt.plot ( theta, '-r' )
                 plt.title ( "Iter %08d, J=%10.4G" % ( n_iter, j_new ))
                 plt.grid ( True )
-                plt.savefig ("/tmp/SPSA_%08d.png", dpi=72 )
+                plt.savefig ("/tmp/SPSA_%08d.png" % n_iter, dpi=72 )
                 plt.close()
             n_iter += 1
         return ( theta, j_new, n_iter)
