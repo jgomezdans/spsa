@@ -5,7 +5,7 @@ A class to implement Simultaneous Perturbation Stochastic Approximation.
 """
 import pdb
 import numpy as np
-
+import matplotlib.pyplot as plt
 
 class SimpleSPSA ( object ):
     """Simultaneous Perturbation Stochastic Approximation. 
@@ -150,6 +150,12 @@ class SimpleSPSA ( object ):
                     theta[i_max] = self.max_vals[i_max]*0.9
                 if len ( i_min ) > 0:
                     theta[i_min] = self.min_vals[i_min]*1.1
+            if report == 1:
+                plt.plot ( theta, '-r' )
+                plt.title ( "Iter %08d, J=%10.4G" % ( n_iter, j_new )
+                plt.grid ( True )
+                plt.savefig ("/tmp/SPSA_%08d.png", dpi=72 )
+                plt.close()
             n_iter += 1
         return ( theta, j_new, n_iter)
 
