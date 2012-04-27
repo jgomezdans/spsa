@@ -3,6 +3,7 @@
 """
 A class to implement Simultaneous Perturbation Stochastic Approximation.
 """
+import pdb
 import numpy as np
 
 
@@ -54,7 +55,7 @@ class SimpleSPSA ( object ):
         retval = self.loss ( theta, *(self.args ) )
         return retval
 
-    def minimise ( self, theta_0, ens_size=2 ):
+    def minimise ( self, theta_0, ens_size=2, report=500 ):
         """The main minimisation loop. Requires a starting value, and optionally
         a number of ensemble realisations to estimate the gradient. It appears
         that you only need two of these, but the more the merrier, I guess.
@@ -105,7 +106,7 @@ class SimpleSPSA ( object ):
             # The new value of the gradient.
             j_new = self.calc_loss ( theta )
             # Be chatty to the user, tell him/her how it's going...
-            if n_iter % 500 == 0:
+            if n_iter % report == 0:
                 print "\tIter %05d" % n_iter, j_new, ak, ck
             # Functional tolerance: you can specify to ignore new theta values
             # that result in large shifts in the function value. Not a great
@@ -128,13 +129,13 @@ class SimpleSPSA ( object ):
                     theta = theta_saved
                     continue
             # Ignore results that are outside the boundaries
-            if (self.min_vals is not None) and (self.max_vals is not None):
-                i_max = np.where ( theta >= self.max_vals )
-                i_min = np.where ( theta <= self.min_vals )
-                theta[i_max] = self.max_vals[i_max]*0.9
-                theta[i_min] = self.min_vals[i_min]*1.1
-                #theta = np.minimum ( theta, self.max_vals )
-                #theta = np.maximum ( theta, self.min_vals ) 
+            if (self.min_vals is not None) and (self.max_vals is not None):      
+                i_max = np.where ( theta >= self.max_vals )[0]
+                i_min = np.where ( theta <= self.min_vals )[0]
+                if len( i_max ) > 0:
+                    theta[i_max] = self.max_vals[i_max]*0.9
+                if len ( i_min ) > 0:
+                    theta[i_min] = self.min_vals[i_min]*1.1
             n_iter += 1
         return ( theta, j_new, n_iter)
 
