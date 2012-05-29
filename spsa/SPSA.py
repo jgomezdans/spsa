@@ -18,7 +18,7 @@ class SimpleSPSA ( object ):
 
     def __init__ ( self, loss_function, a_par = 1e-6, noise_var=0.01, args=(), \
             min_vals=None, max_vals=None, param_tolerance=None, \
-            function_tolerance=None ):
+            function_tolerance=None, max_iter=5000000 ):
         """The constructor requires a loss function and any required extra 
         arguments. Optionally, boundaries as well as tolerance thresholds can
         be specified.
@@ -46,7 +46,7 @@ class SimpleSPSA ( object ):
         self.param_tolerance = param_tolerance
         self.function_tolerance = function_tolerance
         self.c_par = noise_var
-        self.max_iter = 5000000
+        self.max_iter = max_iter
         self.big_a_par = self.max_iter/10.
         self.a_par = a_par
         
